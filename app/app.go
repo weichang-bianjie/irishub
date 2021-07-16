@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/spf13/cast"
 	"io"
 	"os"
 	"path/filepath"
@@ -305,6 +306,21 @@ func NewIrisApp(
 	)
 	tkeys := sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+
+	// FileStreamingConstructor is the StreamingServiceConstructor function for creating a FileStreamingService
+	FileStreamingConstructor := func(opts servertypes.AppOptions) (baseapp.Hook, error) {
+		filePrefix := cast.ToString(opts.Get("streamers.file.prefix"))
+		fileDir := cast.ToString(opts.Get("streamers.file.writeDir"))
+		return NewFileStreamingService(fileDir, filePrefix), nil
+	}
+
+	// generate the streaming service using the constructor, appOptions, and the StoreKeys we want to expose
+	streamingService, err := FileStreamingConstructor(appOpts)
+	if err != nil {
+		tmos.Exit(err.Error())
+	}
+	// register the streaming service with the BaseApp
+	bApp.RegisterHooks(streamingService)
 
 	app := &IrisApp{
 		BaseApp:           bApp,
